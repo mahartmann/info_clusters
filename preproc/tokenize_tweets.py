@@ -39,9 +39,9 @@ def isalpha_or_hash(s):
 
 if __name__=="__main__":
 
-    infile = sys.argv[0]
-    outfile=sys.argv[1]
-    lang=sys.argv[2]
+    infile = sys.argv[1]
+    outfile=sys.argv[2]
+    lang=sys.argv[3]
 
     nlp = stanfordnlp.Pipeline(lang=lang)
     repls = {urlPattern: 'URL ', retweetCommandPattern: 'RETW '}
