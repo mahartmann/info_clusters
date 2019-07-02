@@ -3,7 +3,6 @@ import codecs
 import stanfordnlp
 import re
 import sys
-import logging
 
 
 # filter out urls
@@ -63,6 +62,6 @@ if __name__=="__main__":
                     fout.write('{}\t{}\n'.format(row['tweetid'], ' ##### '.join(tweet)))
                     c += 1
                     if c % 100 == 0:
-                        logging.info('---> Processed {}'.format(c))
+                        print('---> Processed {}'.format(c))
         fout.close()
     csvfile.close()
