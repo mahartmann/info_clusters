@@ -47,7 +47,7 @@ if __name__=="__main__":
 
     bs = 500000
 
-    outfile = '{}.{}.{}'.format(infile , lang, 'tokenized')
+    outfile = '{}.{}.{}_{}'.format(infile , lang, 'tokenized', batch)
     start = bs*batch
     end = bs*(batch+1)
 
