@@ -3,6 +3,7 @@ import codecs
 import stanfordnlp
 import re
 import sys
+import itertools
 
 
 # filter out urls
@@ -11,7 +12,7 @@ import sys
 
 urlPattern = re.compile('(http.*?//[^ ]+) ?')
 retweetCommandPattern = re.compile('RT @([^ ]+?): ')
-shortenedTextString = '\xe2\x80\xa6'
+atMentionPattern = re.compile('@([^ ]+?) ')
 
 def clean_text(replacements, s):
     """
@@ -29,6 +30,7 @@ def isalpha_or_hash(s):
     returns True the word is alphanumeric in the sense of pythons isalpha
     or contains a hashtag
     """
+    s = s.replace('-', '')
     if s.isalpha():
         return True
     if s.startswith('#'):
@@ -40,16 +42,26 @@ def isalpha_or_hash(s):
 if __name__=="__main__":
 
     infile = sys.argv[1]
-    outfile=sys.argv[2]
-    lang=sys.argv[3]
+    lang=sys.argv[2]
+    batch = sys.argv[3]
+
+    bs = 500000
+
+    outfile = '{}.{}.{}'.format(infile , lang, 'tokenized')
+    start = bs*batch
+    end = bs*(batch+1)
 
     nlp = stanfordnlp.Pipeline(lang=lang)
-    repls = {urlPattern: 'URL ', retweetCommandPattern: 'RETW '}
+    repls = {urlPattern: 'URL ', retweetCommandPattern: 'RETW ', atMentionPattern: 'ATMENTION '}
+
 
 
     c = 0
     with codecs.open(infile, 'r', 'utf-8') as csvfile:
-        reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+        header_reader = csv.reader(itertools.islice(csvfile, 0, 1), delimiter=',', quotechar='"')
+        for elm in header_reader:
+            header = elm
+        reader = csv.DictReader(itertools.islice(csvfile, start, end), delimiter=',', quotechar='"', fieldnames=header)
         with codecs.open(outfile, 'w', 'utf-8') as fout:
             for row in reader:
                 if row['tweet_language'] == lang:
