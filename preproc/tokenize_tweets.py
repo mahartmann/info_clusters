@@ -43,7 +43,7 @@ if __name__=="__main__":
 
     infile = sys.argv[1]
     lang=sys.argv[2]
-    batch = sys.argv[3]
+    batch = int(sys.argv[3])
 
     bs = 1000000
 
