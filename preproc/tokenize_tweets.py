@@ -45,7 +45,7 @@ if __name__=="__main__":
     lang=sys.argv[2]
     batch = sys.argv[3]
 
-    bs = 500000
+    bs = 1000000
 
     outfile = '{}.{}.{}_{}'.format(infile , lang, 'tokenized', batch)
     start = bs*batch
