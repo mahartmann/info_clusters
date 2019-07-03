@@ -1,6 +1,7 @@
 import json
 from time import time
 import sys
+import configparser
 
 """
 Rahul's code for generating pointers and using them to access data
@@ -51,22 +52,55 @@ def file_close(fp):
     fp.close()
 
 
-def get_embedding(fp, n):
+def get_data(fp, n):
     start_load = time()
     fp.seek(n)
     emb = fp.readline()
     tid = emb.split(',')[0].strip('"')
     print('Accessed {} at byte {} in {:.2f} seconds.'.format(tid, n, time() - start_load))
-    print(emb)
     return emb
 
 
-if __name__ == '__main__':
-    embeddings_path = sys.argv[1]
-    pointers_path = sys.argv[2]
+class DataLoader(object):
 
-    tokens = make_pointers(embeddings_path)
-    save_pointers(tokens, pointers_path)
+    """
+    loads data via pointers from file specified in the config
+    """
+
+    def __init__(self):
+        self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+        self.config.read('../config.cfg')
+
+    def load(self, data_file, pointers, tids):
+        data = []
+        for tid in tids:
+            if tid not in pointers:
+                print('{} is not in the pointers dict. Skipping'.format(tid))
+            emb = get_data(data_file, pointers[tid])
+            data.append(emb)
+        return data
+
+    def load_tweets(self, tids):
+        data_file = file_open(self.config.get('Files', 'tweets'))
+        pointers = load_pointers(self.config.get('Files', 'tweets_pointers'))
+        return self.load(data_file, pointers, tids)
+
+
+if __name__ == '__main__':
+    #embeddings_path = sys.argv[1]
+    #pointers_path = sys.argv[2]
+
+    #tokens = make_pointers(embeddings_path)
+    #save_pointers(tokens, pointers_path)
+    tids = ['492388766930444288',
+            '710845825622999040',
+            '498874533361627136'
+            ]
+
+    dl = DataLoader()
+    ts = dl.load_tweets(tids)
+    for t in ts:
+        print(t)
 
     """
     emb_file = file_open(embeddings_path)
