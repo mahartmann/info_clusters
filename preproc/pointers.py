@@ -86,6 +86,11 @@ class DataLoader(object):
         return self.load(data_file, pointers, tids)
 
 
+    def get_row(self, tif):
+        # return the row number that the tweet is located in
+        pass
+
+
 if __name__ == '__main__':
     #embeddings_path = sys.argv[1]
     #pointers_path = sys.argv[2]
