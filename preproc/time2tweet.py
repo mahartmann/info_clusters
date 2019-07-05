@@ -27,7 +27,7 @@ def timestamp2tweet_mapping(fname, outname):
             ti2tw.setdefault(ts, []).append(tid)
             c += 1
             if c %1000 == 0:
-                logging.info('Processed {}'.format())
+                logging.info('Processed {}'.format(c))
     csvfile.close()
     save_json(outname, ti2tw)
 
