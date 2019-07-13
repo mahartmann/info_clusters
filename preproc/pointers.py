@@ -16,7 +16,6 @@ def make_pointers(path):
         while True:
             pos = f.tell()
             row = f.readline()
-            print(row)
             if not row:
                 break
             counter += 1
@@ -25,7 +24,26 @@ def make_pointers(path):
             token = token.strip('"')
             key = token
             tokens[key] = pos
-            if counter % 10 ** 6 == 0:
+            if counter % 10 ** 3 == 0:
+                print('Processed {} vectors...'.format(counter))
+    return tokens
+
+def make_pointers_mh17(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        tokens = {}
+        counter = 0
+        while True:
+            pos = f.tell()
+            row = f.readline()
+            if not row:
+                break
+            counter += 1
+            row = row.strip()
+            token = row.split('\t')[0]
+            token = token.strip()
+            key = token
+            tokens[key] = pos
+            if counter % 10 ** 3 == 0:
                 print('Processed {} vectors...'.format(counter))
     return tokens
 
@@ -71,19 +89,23 @@ class DataLoader(object):
         self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
         self.config.read('../config.cfg')
 
-    def load(self, data_file, pointers, tids):
+        self.data_file, self.pointers = self._load_tweets()
+
+    def load_tweets(self,  tids):
         data = []
         for tid in tids:
-            if tid not in pointers:
+            if tid not in self.pointers:
                 print('{} is not in the pointers dict. Skipping'.format(tid))
-            emb = get_data(data_file, pointers[tid])
+            emb = get_data(self.data_file, self.pointers[tid])
             data.append(emb)
         return data
 
-    def load_tweets(self, tids):
+    def _load_tweets(self):
         data_file = file_open(self.config.get('Files', 'tweets'))
         pointers = load_pointers(self.config.get('Files', 'tweets_pointers'))
-        return self.load(data_file, pointers, tids)
+        return data_file, pointers
+
+
 
 
     def get_row(self, tif):
@@ -92,11 +114,13 @@ class DataLoader(object):
 
 
 if __name__ == '__main__':
-    #embeddings_path = sys.argv[1]
-    #pointers_path = sys.argv[2]
-
-    #tokens = make_pointers(embeddings_path)
-    #save_pointers(tokens, pointers_path)
+    embeddings_path = sys.argv[1]
+    pointers_path = sys.argv[2]
+    #embeddings_path = '/home/mareike/PycharmProjects/sheffield/data/ira_tweets_csv_hashed.csv'
+    #pointers_path = '/home/mareike/PycharmProjects/sheffield/data/ira_tweets_csv_hashed.pointers.json'
+    tokens = make_pointers_mh17(embeddings_path)
+    save_pointers(tokens, pointers_path)
+    """
     tids = ['492388766930444288',
             '710845825622999040',
             '498874533361627136'
@@ -107,7 +131,7 @@ if __name__ == '__main__':
     for t in ts:
         print(t)
 
-    """
+
     emb_file = file_open(embeddings_path)
     lines = load_pointers(pointers_path)
     tids = ['492388766930444288',
