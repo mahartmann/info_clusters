@@ -60,7 +60,7 @@ if __name__=="__main__":
     batch = int(sys.argv[3])
 
     bs = 1000000
-    minibatch_size = 10000
+    minibatch_size = 100
 
 
     outfile = '{}.{}.{}_{}'.format(infile , lang, 'NER', batch)
@@ -83,6 +83,8 @@ if __name__=="__main__":
         tweet_batch = []
         batch_ids = []
         for row in reader:
+            c+= 1
+
             if row['tweet_language'] == lang:
                 t = clean_text(repls, row['tweet_text'])
 
@@ -99,5 +101,11 @@ if __name__=="__main__":
                     # reset the list
                     tweet_batch = []
                     batch_ids = []
+        output = ner_model(tweet_batch)
+        # dump to file
+        dump_ner_output_to_file(outfile, output, batch_ids)
+        # reset the list
+        tweet_batch = []
+        batch_ids = []
 
     csvfile.close()
