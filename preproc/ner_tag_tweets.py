@@ -6,7 +6,8 @@ import sys
 import itertools
 from deeppavlov import configs, build_model
 import json
-
+import os
+import logging
 
 # filter out urls
 # filter out @mentions
@@ -51,6 +52,18 @@ def dump_ner_output_to_file(fname, output, batch_ids):
             json.dump(d, fout)
     fout.close()
 
+def setup_logging(exp_path='.', logfile='log.txt'):
+    # create a logger and set parameters
+    logfile = os.path.join(exp_path, logfile)
+    logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
+    rootLogger = logging.getLogger()
+    rootLogger.setLevel(logging.DEBUG)
+    fileHandler = logging.FileHandler(logfile)
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(consoleHandler)
 
 
 if __name__=="__main__":
@@ -62,7 +75,7 @@ if __name__=="__main__":
     bs = 1000000
     minibatch_size = 100
 
-
+    setup_logging(logfile='log{}.txt'.format(batch))
     outfile = '{}.{}.{}_{}'.format(infile , lang, 'NER', batch)
     start = bs*batch
     end = bs*(batch+1)
@@ -84,7 +97,8 @@ if __name__=="__main__":
         batch_ids = []
         for row in reader:
             c+= 1
-
+            if c%10000==0:
+                logging.info('Processed {} lines'.format(c))
             if row['tweet_language'] == lang:
                 t = clean_text(repls, row['tweet_text'])
 
@@ -95,8 +109,10 @@ if __name__=="__main__":
 
                 if len(tweet_batch) >= minibatch_size:
                     # run ner
+                    logging.info('Tagging...')
                     output = ner_model(tweet_batch)
                     # dump to file
+                    logging.info('Dumping to file...')
                     dump_ner_output_to_file(outfile, output, batch_ids)
                     # reset the list
                     tweet_batch = []
