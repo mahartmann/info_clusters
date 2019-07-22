@@ -49,7 +49,8 @@ def dump_ner_output_to_file(fname, output, batch_ids):
             orig = out[0]
             tags = out[1]
             d = {'tid': tid, 'text': orig, 'tags': tags}
-            json.dump(d, fout)
+            fout.write(json.dumps(d))
+            fout.write('\n')
     fout.close()
 
 def setup_logging(exp_path='.', logfile='log.txt'):
