@@ -76,13 +76,14 @@ if __name__=="__main__":
     minibatch_size = 100
 
     setup_logging(logfile='log{}.txt'.format(batch))
+    logging.info('Start logging...')
     outfile = '{}.{}.{}_{}'.format(infile , lang, 'NER', batch)
     start = bs*batch
     end = bs*(batch+1)
 
     repls = {urlPattern: 'URL ', retweetCommandPattern: 'RETW ', atMentionPattern: 'ATMENTION '}
 
-
+    logging.info('Loading model...')
     ner_model = build_model(configs.ner.ner_rus_bert, download=True)
 
 
@@ -97,7 +98,7 @@ if __name__=="__main__":
         batch_ids = []
         for row in reader:
             c+= 1
-            if c%10000==0:
+            if c%1000==0:
                 logging.info('Processed {} lines'.format(c))
             if row['tweet_language'] == lang:
                 t = clean_text(repls, row['tweet_text'])
