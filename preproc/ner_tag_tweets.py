@@ -45,9 +45,7 @@ def isalpha_or_hash(s):
 def dump_ner_output_to_file(fname, output, batch_ids):
     with open(fname, 'a', encoding='utf-8') as fout:
         # generate a json dict for each
-        for out, tid in zip(output, batch_ids):
-            orig = out[0]
-            tags = out[1]
+        for orig, tags, tid in zip(output[0], output[1], batch_ids):
             d = {'tid': tid, 'text': orig, 'tags': tags}
             fout.write(json.dumps(d))
             fout.write('\n')
@@ -74,7 +72,7 @@ if __name__=="__main__":
     batch = int(sys.argv[3])
 
     bs = 1000000
-    minibatch_size = 100
+    minibatch_size = 1000
 
     setup_logging(logfile='log{}.txt'.format(batch))
     logging.info('Start logging...')
