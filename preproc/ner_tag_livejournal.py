@@ -78,15 +78,16 @@ if __name__=="__main__":
 
     fnames = sorted([f for f in os.listdir(indir) if f.endswith('.text.json')])
     for fname in fnames:
-
+        logging.info('Processing {}'.format(fname))
         d = load_json(os.path.join(indir, fname))
-        ner = dict()
+        ner = {'text':[], 'tags': []}
 
         tweet_batch = []
         batch_ids = []
         for elm in d['text']:
             t = clean_text(repls, elm)
-            tweet_batch.append(t)
+            if len(t) > 0:
+                tweet_batch.append(t)
 
             if len(tweet_batch) >= minibatch_size:
                 # run ner
@@ -98,9 +99,10 @@ if __name__=="__main__":
                 # reset the list
                 tweet_batch = []
 
-        output = ner_model(tweet_batch)
-        ner.setdefault('text', []).extend(output[0])
-        ner.setdefault('tags', []).extend(output[1])
+        if len(tweet_batch) > 0:
+            output = ner_model(tweet_batch)
+            ner.setdefault('text', []).extend(output[0])
+            ner.setdefault('tags', []).extend(output[1])
 
 
         d['ner'] = ner
