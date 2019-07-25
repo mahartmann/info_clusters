@@ -2,6 +2,7 @@ import json
 from time import time
 import sys
 import configparser
+import csv
 
 """
 Rahul's code for generating pointers and using them to access data
@@ -75,7 +76,7 @@ def get_data(fp, n):
     fp.seek(n)
     emb = fp.readline()
     tid = emb.split(',')[0].strip('"')
-    print('Accessed {} at byte {} in {:.2f} seconds.'.format(tid, n, time() - start_load))
+    #print('Accessed {} at byte {} in {:.2f} seconds.'.format(tid, n, time() - start_load))
     return emb
 
 
@@ -90,15 +91,23 @@ class DataLoader(object):
         self.config.read('../config.cfg')
 
         self.data_file, self.pointers = self._load_tweets()
+        self.header = ["tweetid", "userid", "user_display_name", "user_screen_name", "user_reported_location",
+                       "user_profile_description", "user_profile_url", "follower_count", "following_count",
+                       "account_creation_date", "account_language", "tweet_language", "tweet_text", "tweet_time",
+                       "tweet_client_name", "in_reply_to_tweetid", "in_reply_to_userid", "quoted_tweet_tweetid",
+                       "is_retweet", "retweet_userid", "retweet_tweetid", "latitude", "longitude", "quote_count",
+                       "reply_count", "like_count", "retweet_count", "hashtags", "urls", "user_mentions",
+                       "poll_choices"]
 
-    def load_tweets(self,  tids):
+    def load_tweets(self, tids):
         data = []
         for tid in tids:
             if tid not in self.pointers:
                 print('{} is not in the pointers dict. Skipping'.format(tid))
             emb = get_data(self.data_file, self.pointers[tid])
             data.append(emb)
-        return data
+        reader = csv.DictReader(data, delimiter=',', quotechar='"', fieldnames=self.header)
+        return [row for row in reader]
 
     def _load_tweets(self):
         data_file = file_open(self.config.get('Files', 'tweets'))
