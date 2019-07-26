@@ -51,6 +51,17 @@ def isalpha_or_hash(s):
     else:
         return False
 
+def dump_ner_output_to_file(fname, output, batch):
+    # info in batch is: (tokenized_tweet, cleaned_tokenized_tweet, tweet_text, tweet_id)
+    with open(fname, 'a', encoding='utf-8') as fout:
+        # generate a json dict for each tweet
+        for ner_text, ner_tags, cleaned_tokenized, orig_tweet, tid  in zip(output[0], output[1], [elm[1] for elm in batch],  [elm[2] for elm in batch],  [elm[3] for elm in batch]):
+            d = {'tid': tid, 'ner:': {'text': ner_text, 'tags': ner_tags}, 'text': orig_tweet, 'cleaned_text': cleaned_tokenized}
+            fout.write(json.dumps(d))
+            fout.write('\n')
+    fout.close()
+
+
 
 if __name__=="__main__":
 
@@ -61,14 +72,17 @@ if __name__=="__main__":
     outfile_tmp = outfile + '.tmp'
 
     setup_logging('.', 'log.txt')
+    minibatch_size = 100
 
     # setup the models
     nlp = stanfordnlp.Pipeline(lang=lang)
+
     if lang == 'en':
         ner_model =  build_model(configs.ner.ner_ontonotes_bert, download=False)
 
     elif lang == 'ru':
         ner_model = build_model(configs.ner.ner_rus_bert, download=False)
+
 
 
 
@@ -78,43 +92,49 @@ if __name__=="__main__":
 
     c = 0
     with codecs.open(infile, 'r', 'utf-8') as f:
-        with codecs.open(outfile_tmp, 'a', 'utf-8') as fout:
-            for row in f:
-                tweet_lang = row.split('\t')[-2]
-                if tweet_lang == lang:
-                        tweet_data = {}
-                        tweet_id = row.split('\t')[0]
-                        tweet_text = row.split('\t')[9]
-                        # replace twitter lingo
-                        t = clean_text(repls, tweet_text)
-                        #lower case hashtags
-                        t = lowercase_hashtags(t)
-                        #tokenize
-                        doc = nlp(t)
-                        tweet = []
-                        for sentence in doc.sentences:
-                            s = ' '.join([word.text for word in sentence.words])
-                            tweet.append(s)
-                        tokenized_tweet = ' ##### '.join(tweet)
 
-                        # ner
-                        output = ner_model([tokenized_tweet])
+        batch = []
+        for row in f:
+            if len(row.split('\t')) < 2: continue
+            tweet_lang = row.split('\t')[-2]
+            if tweet_lang == lang:
+                    tweet_data = {}
+                    tweet_id = row.split('\t')[0]
+                    tweet_text = row.split('\t')[9]
+                    # replace twitter lingo
+                    t = clean_text(repls, tweet_text)
+                    #lower case hashtags
+                    t = lowercase_hashtags(t)
+                    #tokenize
+                    doc = nlp(t)
+                    tweet = []
+                    for sentence in doc.sentences:
+                        s = ' '.join([word.text for word in sentence.words])
+                        tweet.append(s)
 
-                        # clean non alphanumerics
-                        cleaned_tokenized_tweet = ' '.join([tok.lower() for tok in tokenized_tweet.split(' ') if isalpha_or_hash(tok)])
+                    tokenized_tweet = ' '.join(tweet)
+                    tokenized_tweet_sent_sep = '#####'.join(tweet)
 
-                        tweet_data['tid'] = tweet_id
-                        tweet_data['text'] = tweet_text
-                        tweet_data['cleaned_text'] = cleaned_tokenized_tweet
-                        tweet_data['ner'] = {'text': output[0][0], 'tags': output[1][0]}
+                    #strip non alphanumerics, lowercase
+                    cleaned_tokenized_tweet = ' '.join(
+                        [tok.lower() for tok in tokenized_tweet_sent_sep.split(' ') if isalpha_or_hash(tok)])
 
-                        data[tweet_id] = tweet_data
-                        c += 1
-                        if c % 100 == 0:
-                            logging.info('---> Processed {}'.format(c))
+                    if len(cleaned_tokenized_tweet) > 0:
+                        batch.append((tokenized_tweet_sent_sep, cleaned_tokenized_tweet, tweet_text, tweet_id))
+                    # ner
+                    if len(batch) >= minibatch_size:
 
-                        fout.write(json.dumps(tweet_data))
-                        fout.write('\n')
 
+                        output = ner_model([elm[0] for elm in batch])
+                        dump_ner_output_to_file(outfile, output, batch)
+                        batch = []
+
+
+                    c += 1
+                    if c % 1000 == 0:
+                        logging.info('---> Processed {}'.format(c))
+
+
+
+        dump_ner_output_to_file(outfile, output, batch)
     f.close()
-    save_json(outfile, data)
