@@ -68,11 +68,15 @@ if __name__=="__main__":
     infile = sys.argv[1]
     outfile = sys.argv[2]
     lang=sys.argv[3]
+    batch = sys.argv[4]
 
-    outfile_tmp = outfile + '.tmp'
+    bs = 100000
+    start = bs * batch
+    end = bs * (batch + 1)
+    outfile = outfile +  '_{}'.format(batch)
 
-    setup_logging('.', 'log.txt')
-    minibatch_size = 100
+    setup_logging('.', 'log_{}.txt'.format(batch))
+    minibatch_size = 1000
 
     # setup the models
     nlp = stanfordnlp.Pipeline(lang=lang)
@@ -94,7 +98,7 @@ if __name__=="__main__":
     with codecs.open(infile, 'r', 'utf-8') as f:
 
         batch = []
-        for row in f:
+        for row in itertools.islice(f, start, end):
             if len(row.split('\t')) < 2: continue
             tweet_lang = row.split('\t')[-2]
             if tweet_lang == lang:
