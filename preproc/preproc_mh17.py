@@ -112,7 +112,6 @@ if __name__=="__main__":
                         c += 1
                         if c % 100 == 0:
                             logging.info('---> Processed {}'.format(c))
-                        if c > 1000:break
 
                         fout.write(json.dumps(tweet_data))
                         fout.write('\n')
