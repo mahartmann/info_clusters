@@ -53,6 +53,7 @@ def isalpha_or_hash(s):
 
 def dump_ner_output_to_file(fname, output, batch):
     # info in batch is: (tokenized_tweet, cleaned_tokenized_tweet, tweet_text, tweet_id)
+    logging.info('Dumping to file')
     with open(fname, 'a', encoding='utf-8') as fout:
         # generate a json dict for each tweet
         for ner_text, ner_tags, cleaned_tokenized, orig_tweet, tid  in zip(output[0], output[1], [elm[1] for elm in batch],  [elm[2] for elm in batch],  [elm[3] for elm in batch]):
@@ -68,7 +69,7 @@ if __name__=="__main__":
     infile = sys.argv[1]
     outfile = sys.argv[2]
     lang=sys.argv[3]
-    batch = sys.argv[4]
+    batch = int(sys.argv[4])
 
     bs = 100000
     start = bs * batch
@@ -76,7 +77,7 @@ if __name__=="__main__":
     outfile = outfile +  '_{}'.format(batch)
 
     setup_logging('.', 'log_{}.txt'.format(batch))
-    minibatch_size = 1000
+    minibatch_size = 100
 
     # setup the models
     nlp = stanfordnlp.Pipeline(lang=lang)
