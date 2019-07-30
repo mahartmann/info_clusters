@@ -40,9 +40,9 @@ def make_pointers_mh17(path):
             if not row:
                 break
             counter += 1
-            row = json.loads(row).strip()
-            token = row['tweetid']
-            token = token.strip()
+            row = row.strip()
+            token = row.split(',')[0]
+            token = token.strip('"')
             key = token
             tokens[key] = pos
             if counter % 10 ** 3 == 0:
