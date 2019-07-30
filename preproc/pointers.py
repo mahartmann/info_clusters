@@ -3,6 +3,7 @@ from time import time
 import sys
 import configparser
 import csv
+import json
 
 """
 Rahul's code for generating pointers and using them to access data
@@ -39,8 +40,8 @@ def make_pointers_mh17(path):
             if not row:
                 break
             counter += 1
-            row = row.strip()
-            token = row.split('\t')[0]
+            row = json.loads(row).strip()
+            token = row['tweetid']
             token = token.strip()
             key = token
             tokens[key] = pos
