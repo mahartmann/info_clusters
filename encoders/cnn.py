@@ -7,6 +7,7 @@ import torch.optim as optim
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_recall_fscore_support
 from torch import autograd
 from torch.nn.utils.rnn import pack_padded_sequence
+import argparse
 
 from info_clusters.encoders.model_utils import *
 
@@ -117,22 +118,20 @@ def print_result_summary(results):
     return s
 
 
+def main(args):
 
-
-if __name__=="__main__":
-
-    seed = 42
-    num_epochs = 500
-    batch_size = 256
-    embedding_dim = 300
-    num_feature_maps = 10
-    kernel_size = 3
-    lr = 0.1
-    p = 0.2
-    embeddings_file = '/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/resources/mh17_60_20_20_additional_embs.txt.prefixed'
-    max_vocab = -1
-
-    additional_data_file = '/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/additional_traindata_1.json'
+    seed = args.seed
+    num_epochs = args.epochs
+    batch_size = args.bs
+    embedding_dim = args.emb_dim
+    num_feature_maps = args.num_feature_maps
+    kernel_size = args.ks
+    lr = args.lr
+    p = args.dropout
+    embeddings_file = args.emb_file
+    datafile = args.data
+    max_vocab = args.max_vocab
+    additional_data_file = args.additional_data
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -142,33 +141,28 @@ if __name__=="__main__":
 
     if embeddings_file != '':
         pretrained_embeddings, word2idx, idx2word = load_embeddings_from_file(embeddings_file, max_vocab=max_vocab)
-        print(word2idx)
     else:
         pretrained_embeddings, word2idx, idx2word = None, None, None
 
-    #d = load_json('/home/mareike/PycharmProjects/sheffield/data/test_data/duch_vernite.json')
-    #d = load_json('/home/mareike/PycharmProjects/frames/code/data/mh17/mh17_80_20_20.json')
-    d = load_json('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_60_20_20.json')
-    additional_data = load_json(additional_data_file)
+    d = load_json(datafile)
+
+    if additional_data_file != '':
+        additional_data = load_json(additional_data_file)
+    else:
+        additional_data = {'seq':[], 'label':[]}
     sentences = [prefix_sequence(sent, 'en') for sent in d['train']['seq']] + [prefix_sequence(sent, 'ru') for sent in additional_data['seq']]
     labels = d['train']['label'] + additional_data['label']
-    #labels = ['0' if l[0] == '3' else '1' for l in d['train']['label']]
-    #labels = [ l[0] for  l in d['train']['label']]
 
-    sentences, labels = upsample(sentences, labels)
-    print(print_class_distributions(labels))
+    if args.upsample:
+        sentences, labels = upsample(sentences, labels)
+
 
     dev_sentences = [prefix_sequence(sent, 'en') for sent in d['dev']['seq']]
     dev_labels = d['dev']['label']
-    #dev_labels =['0' if l[0] == '3' else '1' for l in  d['dev']['label']]
-    #dev_labels = [ l[0] for  l in d['dev']['label']]
-    print(print_class_distributions(dev_labels))
-
 
 
     # prepare train set
     seqs, lengths, word2idx = feature_extractor(sentences, word2idx)
-    print(seqs)
     logging.info('Vocabulary has {} entries'.format(len(word2idx)))
     logging.info(word2idx)
     golds, labelset = prepare_labels(labels, None)
@@ -176,11 +170,9 @@ if __name__=="__main__":
     # prepare dev set
     dev_seqs, dev_lengths, _ = feature_extractor(dev_sentences, word2idx)
     dev_golds, _ = prepare_labels(dev_labels, labelset)
-    print(dev_seqs)
 
     # upsample the dev data
     dev_sentences_upsampled, dev_labels_upsampled = upsample(dev_sentences, dev_labels)
-    print(print_class_distributions(dev_labels_upsampled))
     dev_seqs_upsampled, dev_lengths_upsampled, _ = sents2seqs(dev_sentences, word2idx)
     dev_golds_upsampled, _ = prepare_labels(dev_labels_upsampled, labelset)
 
@@ -217,8 +209,6 @@ if __name__=="__main__":
         # predict the train data
         train_results = p_r_f(gold_labels, preds, labelset)
         # predict the val data
-
-
         dev_loss_up, dev_results_up = evaluate_validation_set(model=model, seqs=dev_seqs_upsampled, golds=dev_golds_upsampled, lengths=dev_lengths_upsampled,
                                                     sentences=dev_sentences_upsampled, criterion=loss_function, labelset=labelset)
         dev_loss, dev_results = evaluate_validation_set(model=model, seqs=dev_seqs, golds=dev_golds, lengths=dev_lengths,
@@ -232,6 +222,7 @@ if __name__=="__main__":
         logging.info('Summary dev_up')
         logging.info(print_result_summary(dev_results_up))
 
+    """
     # Prepare test data
     test_sentences = [prefix_sequence(sent, 'en') for sent in d['test']['seq']]
     test_labels = d['test']['label']
@@ -240,3 +231,41 @@ if __name__=="__main__":
     test_golds, _ = prepare_labels(test_labels, labelset)
     test_loss, test_acc = evaluate_validation_set(model, test_seqs, test_golds, test_lengths, test_sentences, loss_function)
     logging.info('Epoch {}: Test loss {:.4f}, test acc {:.4f}'.format(epoch, test_loss, test_acc))
+
+    """
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+          description='Tweet classification using CNN')
+    parser.add_argument('--data', type=str, default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_60_20_20.json',
+                            help="File with main data")
+    parser.add_argument('--additional_data', type=str,
+                        default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/additional_traindata_1.json',
+                        help="File with additional train data")
+    parser.add_argument('--exp_dir', type=str, default='out',
+                        help="Path to experiment folder")
+    parser.add_argument('--seed', type=int, default=42,
+                        help="Random seed")
+    parser.add_argument('--bs', type=int, default=256,
+                        help="Batch size")
+    parser.add_argument('--epochs', type=int, default=500,
+                        help="Number of epochs")
+    parser.add_argument('--emb_dim', type=int, default=300,
+                        help="Embedding dimension")
+    parser.add_argument('--num_feature_maps', type=int, default=10,
+                        help="Number of CNN feature maps")
+    parser.add_argument('--ks', type=int, default=3,
+                        help="kernel size")
+    parser.add_argument('--upsample', type=bool_flag, default=True,
+                        help="if enabled upsample the train data according to size of largest class")
+    parser.add_argument('--lr', type=float, default=0.01,
+                        help="Learning rate")
+    parser.add_argument('--dropout', type=float, default=0.2,
+                        help="Keep probability for dropout")
+    parser.add_argument('--emb_file', type=str, default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/resources/mh17_60_20_20_additional_embs.txt.prefixed',
+                        help="File with pre-trained embeddings")
+    parser.add_argument('--max_vocab', type=int, default=-1,
+                        help="Maximum number of words read in from the pretrained embeddings. -1 to disable")
+
+    args = parser.parse_args()
+    main(args)

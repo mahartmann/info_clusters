@@ -6,6 +6,9 @@ import os
 import logging
 from collections import Counter
 import numpy as np
+import subprocess
+import random
+import argparse
 
 from info_clusters.encoders.lstm import UNK
 from info_clusters.myutils import read_file, write_file
@@ -256,6 +259,44 @@ def prefix_sequence(seq, prefix):
 
 def deprefix_sequence(seq):
     return ' '.join([elm.split(':')[-1] for elm in seq.split()])
+
+
+def bool_flag(s):
+    """
+    Parse boolean arguments from the command line.
+    """
+    if s.lower() in ['off', 'false', '0']:
+        return False
+    if s.lower() in ['on', 'true', '1']:
+        return True
+    raise argparse.ArgumentTypeError("invalid value for a boolean flag (0 or 1)")
+
+def get_exp_path(exp_path, exp_name, exp_id):
+    """
+    Create a directory to store the experiment.
+    """
+    # create the main dump path if it does not exist
+    exp_folder = exp_path
+    if not os.path.exists(exp_folder):
+        subprocess.Popen("mkdir {}".format(exp_folder), shell=True).wait()
+    assert exp_name != ''
+    exp_folder = os.path.join(exp_folder, exp_name)
+    if not os.path.exists(exp_folder):
+        subprocess.Popen("mkdir {}".format(exp_folder), shell=True).wait()
+    if exp_id == '':
+        chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+        while True:
+            exp_id = ''.join(random.choice(chars) for _ in range(10))
+            exp_path = os.path.join(exp_folder, exp_id)
+            if not os.path.isdir(exp_path):
+                break
+    else:
+        exp_path = os.path.join(exp_folder, exp_id)
+        assert not os.path.isdir(exp_path), exp_path
+    # create the dump folder
+    if not os.path.isdir(exp_path):
+        subprocess.Popen("mkdir {}".format(exp_path), shell=True).wait()
+    return exp_path
 
 
 if __name__=="__main__":
