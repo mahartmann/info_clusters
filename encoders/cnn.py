@@ -118,7 +118,13 @@ def print_result_summary(results):
     return s
 
 
+def log_params(args):
+    for key, val in args.items():
+        logging.info('{} {}'.format(key, val))
+
+
 def main(args):
+
 
     seed = args.seed
     num_epochs = args.epochs
@@ -136,6 +142,8 @@ def main(args):
     torch.manual_seed(seed)
     np.random.seed(seed)
     setup_logging()
+
+    log_params(vars(args))
 
     feature_extractor = sents2seqs
 
