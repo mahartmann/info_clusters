@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 import torch
+import configparser
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import confusion_matrix, accuracy_score
@@ -96,7 +97,7 @@ def main(args):
     embeddings_file = args.emb_file
     datafile = args.data
     max_vocab = args.max_vocab
-    additional_data_file = args.additional_data
+    use_additional_data = args.additional_data
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -113,7 +114,11 @@ def main(args):
 
     d = load_json(datafile)
 
-    if additional_data_file != '':
+    if use_additional_data is True:
+        config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+        config.read(args.config)
+        additional_data_file = config.get('Files', 'additional_data')
+        logging.info('Loading additional data from {}'.format(additional_data_file))
         additional_data = load_json(additional_data_file)
     else:
         additional_data = {'seq': [], 'label': []}
@@ -121,7 +126,7 @@ def main(args):
                                                                                additional_data['seq']]
     labels = d['train']['label'] + additional_data['label']
 
-    if args.upsample:
+    if args.upsample is True:
         logging.info('Upsampling the train data')
         sentences, labels = upsample(sentences, labels)
 
@@ -226,9 +231,11 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str,
                             default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_60_20_20.json',
                             help="File with main data")
-    parser.add_argument('--additional_data', type=str,
-                            default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/additional_traindata_1.json',
-                            help="File with additional train data")
+    parser.add_argument('--additional_data', type=bool,
+                        default=True,
+                        help="Use additional train data. Location of the data is specified in the config")
+    parser.add_argument('--config', type=str, default='config.cfg',
+                        help="Config file")
     parser.add_argument('--exp_dir', type=str, default='out',
                             help="Path to experiment folder")
     parser.add_argument('--seed', type=int, default=42,
