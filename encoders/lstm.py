@@ -112,6 +112,7 @@ def main(args):
 
     if use_pretrained_embeddings is True:
         embeddings_file = config.get('Files', 'emb_file')
+        logging.info('Loading pretrained embedding from {}'.format(embeddings_file))
         pretrained_embeddings, word2idx, idx2word = load_embeddings_from_file(embeddings_file, max_vocab=max_vocab)
     else:
         pretrained_embeddings, word2idx, idx2word = None, None, None
