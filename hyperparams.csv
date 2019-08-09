@@ -1,5 +1,5 @@
-seed,bs,epochs,emb_dim,num_feature_maps,ks,upsample,lr,dropout,max_vocab,additional_data
-int,int,int,int,int,int,bool,float,float,int,bool
-0,256,80,300,10,3,FALSE,0.1,0.2,-1,TRUE
-1,256,500,300,10,3,TRUE,0.1,0.2,-1,TRUE
-2,256,500,300,10,3,TRUE,0.1,0.2,-1,TRUE
+seed,bs,epochs,emb_dim,num_feature_maps,ks,upsample,lr,dropout,max_vocab,additional_data,embs
+int,int,int,int,int,int,bool,float,float,int,bool,bool
+0,256,10,300,10,3,FALSE,0.1,0.2,-1,FALSE,FALSE
+1,256,500,300,10,3,TRUE,0.1,0.2,-1,TRUE,TRUE
+2,256,500,300,10,3,TRUE,0.1,0.2,-1,TRUE,TRUE
