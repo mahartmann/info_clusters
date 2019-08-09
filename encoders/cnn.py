@@ -102,7 +102,7 @@ def main(args):
     kernel_size = args.ks
     lr = args.lr
     p = args.dropout
-    embeddings_file = args.emb_file
+    use_pretrained_embeddings = args.embs
     datafile = args.data
     max_vocab = args.max_vocab
     use_additional_data = args.additional_data
@@ -113,9 +113,13 @@ def main(args):
 
     log_params(vars(args))
 
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    config.read(args.config)
+
     feature_extractor = sents2seqs
 
-    if embeddings_file != '':
+    if use_pretrained_embeddings is True:
+        embeddings_file = config.get('Files', 'emb_file')
         pretrained_embeddings, word2idx, idx2word = load_embeddings_from_file(embeddings_file, max_vocab=max_vocab)
     else:
         pretrained_embeddings, word2idx, idx2word = None, None, None
@@ -123,8 +127,6 @@ def main(args):
     d = load_json(datafile)
 
     if use_additional_data is True:
-        config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
-        config.read(args.config)
         additional_data_file = config.get('Files', 'additional_data')
         logging.info('Loading additional data from {}'.format(additional_data_file))
         additional_data = load_json(additional_data_file)
@@ -254,8 +256,8 @@ if __name__ == '__main__':
                         help="Learning rate")
     parser.add_argument('--dropout', type=float, default=0.2,
                         help="Keep probability for dropout")
-    parser.add_argument('--emb_file', type=str, default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/resources/mh17_60_20_20_additional_embs.txt.prefixed',
-                        help="File with pre-trained embeddings")
+    parser.add_argument('--embs', type=bool, default=True,
+                        help="Use pre-trained embeddings")
     parser.add_argument('--max_vocab', type=int, default=-1,
                         help="Maximum number of words read in from the pretrained embeddings. -1 to disable")
     parser.add_argument('--hyperparam_csv', type=str,

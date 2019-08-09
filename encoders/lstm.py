@@ -94,7 +94,7 @@ def main(args):
     lr = args.lr
     hidden_dim = args.hid_dim
     p = args.dropout
-    embeddings_file = args.emb_file
+    use_pretrained_embeddings = args.embs
     datafile = args.data
     max_vocab = args.max_vocab
     use_additional_data = args.additional_data
@@ -103,11 +103,15 @@ def main(args):
     np.random.seed(seed)
     setup_logging()
 
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    config.read(args.config)
+
     log_params(vars(args))
 
     feature_extractor = sents2seqs
 
-    if embeddings_file != '':
+    if use_pretrained_embeddings is True:
+        embeddings_file = config.get('Files', 'emb_file')
         pretrained_embeddings, word2idx, idx2word = load_embeddings_from_file(embeddings_file, max_vocab=max_vocab)
     else:
         pretrained_embeddings, word2idx, idx2word = None, None, None
@@ -254,9 +258,8 @@ if __name__ == '__main__':
                             help="Learning rate")
     parser.add_argument('--dropout', type=float, default=0.2,
                             help="Keep probability for dropout")
-    parser.add_argument('--emb_file', type=str,
-                            default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/resources/mh17_60_20_20_additional_embs.txt.prefixed',
-                            help="File with pre-trained embeddings")
+    parser.add_argument('--embs', type=bool, default=True,
+                        help="Use pre-trained embeddings")
     parser.add_argument('--max_vocab', type=int, default=-1,
                             help="Maximum number of words read in from the pretrained embeddings. -1 to disable")
     parser.add_argument('--hyperparam_csv', type=str,
