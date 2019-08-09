@@ -38,9 +38,9 @@ class PaddedTensorDataset(Dataset):
     def __len__(self):
         return self.data_tensor.size(0)
 
-def setup_logging(logfile='log.txt'):
+def setup_logging(exp_path='.', logfile='log.txt'):
     # create a logger and set parameters
-    #logfile = os.path.join(exp_path, logfile)
+    logfile = os.path.join(exp_path, logfile)
     logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
     rootLogger = logging.getLogger()
     rootLogger.setLevel(logging.DEBUG)

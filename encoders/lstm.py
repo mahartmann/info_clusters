@@ -101,7 +101,7 @@ def main(args):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
-    setup_logging(setup_logging(logfile='log_lstm_{}.log'.format(args.rowid)))
+    setup_logging(logfile='log_lstm_{}.log'.format(args.rowid))
 
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
     config.read(args.config)
