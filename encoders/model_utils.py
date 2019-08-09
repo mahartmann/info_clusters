@@ -1,6 +1,7 @@
 import json
 
 import torch
+from sklearn.metrics import precision_recall_fscore_support
 from torch.utils.data import Dataset, DataLoader
 import os
 import logging
@@ -306,3 +307,35 @@ if __name__=="__main__":
     lines = read_file(fname)
     outlines = ['{}:{}'.format(prefix, line) for line in lines]
     write_file(fname + 'prefixed', outlines)
+
+
+def p_r_f(gold, preds, labelset):
+    results = {}
+    results['macro'] = precision_recall_fscore_support(gold, preds, average='macro')
+    results['micro'] = precision_recall_fscore_support(gold, preds, average='micro')
+    results['per_class'] = {}
+    labels = list(set([int(pred) for pred in preds]))
+
+    # it's a tuple with precision, recall, f-score elements
+    per_class_results = precision_recall_fscore_support(gold, preds, average=None, labels=labels)
+
+    for i, label in enumerate(labels):
+        results['per_class'][labelset[label]] = [elm[i] for elm in per_class_results]
+    for label in labelset:
+        if label not in results['per_class']:
+            results['per_class'][label] = [0 for elm in results['macro']]
+    return results
+
+
+def print_result_summary(results):
+    s =  '\nLabel\tP\tR\tF\t\nMacro\t{:.4f}\t{:.4f}\t{:.4f}\nMicro\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(results['macro'][0],results['macro'][1],results['macro'][2],
+                                                                        results['micro'][0], results['micro'][1], results['micro'][2])
+    labels = sorted(results['per_class'].keys())
+    for label in labels:
+        s += '{}\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(label, results['per_class'][label][0],results['per_class'][label][1],results['per_class'][label][2])
+    return s
+
+
+def log_params(args):
+    for key in sorted(args.keys()):
+        logging.info('{}: {}'.format(key, args[key]))

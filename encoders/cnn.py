@@ -1,17 +1,9 @@
-import logging
-
-import numpy as np
-import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_recall_fscore_support
-from torch import autograd
-from torch.nn.utils.rnn import pack_padded_sequence
-import argparse
 
+from info_clusters.encoders import param_reader
 from info_clusters.encoders.model_utils import *
-
-
+from info_clusters.encoders.model_utils import p_r_f, print_result_summary, log_params
 
 UNK = 'UNK'
 
@@ -77,8 +69,7 @@ def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, l
     y_pred = list()
     total_loss = 0
     for batch, targets, lengths, raw_data in seqs2minibatches(seqs, golds, lengths, sentences, batch_size=1):
-        #for r,t in zip(raw_data,targets):
-        #    print(r, t)
+
         batch, targets, lengths = sort_batch(batch, targets, lengths)
         pred = model(batch)
 
@@ -92,38 +83,13 @@ def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, l
 
     return total_loss.data.float()/len(seqs), results
 
-def p_r_f(gold, preds, labelset):
-    results = {}
-    results['macro'] = precision_recall_fscore_support(gold, preds, average='macro')
-    results['micro'] = precision_recall_fscore_support(gold, preds, average='micro')
-    results['per_class'] = {}
-    labels = list(set([int(pred) for pred in preds]))
-
-    # it's a tuple with precision, recall, f-score elements
-    per_class_results = precision_recall_fscore_support(gold, preds, average=None, labels=labels)
-
-    for i, label in enumerate(labels):
-        results['per_class'][labelset[label]] = [elm[i] for elm in per_class_results]
-    for label in labelset:
-        if label not in results['per_class']:
-            results['per_class'][label] = [0 for elm in results['macro']]
-    return results
-
-def print_result_summary(results):
-    s =  '\nLabel\tP\tR\tF\t\nMacro\t{:.4f}\t{:.4f}\t{:.4f}\nMicro\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(results['macro'][0],results['macro'][1],results['macro'][2],
-                                                                        results['micro'][0], results['micro'][1], results['micro'][2])
-    labels = sorted(results['per_class'].keys())
-    for label in labels:
-        s += '{}\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(label, results['per_class'][label][0],results['per_class'][label][1],results['per_class'][label][2])
-    return s
-
-
-def log_params(args):
-    for key, val in args.items():
-        logging.info('{} {}'.format(key, val))
-
 
 def main(args):
+
+    # read params from csv and update the arguments
+    if args.hyperparam_csv != '':
+        csv_params = param_reader.read_hyperparams_from_csv(args.hyperparam_csv, args.rowid)
+        vars(args).update(csv_params)
 
 
     seed = args.seed
@@ -162,6 +128,7 @@ def main(args):
     labels = d['train']['label'] + additional_data['label']
 
     if args.upsample:
+        logging.info('Upsampling the train data')
         sentences, labels = upsample(sentences, labels)
 
 
@@ -196,7 +163,8 @@ def main(args):
     logging.info('Summary val')
     logging.info(print_result_summary(results))
 
-
+    best_epoch = 0
+    best_macro_f = 0
     for epoch in range(num_epochs):
         preds = []
         gold_labels = []
@@ -221,15 +189,23 @@ def main(args):
                                                     sentences=dev_sentences_upsampled, criterion=loss_function, labelset=labelset)
         dev_loss, dev_results = evaluate_validation_set(model=model, seqs=dev_seqs, golds=dev_golds, lengths=dev_lengths,
                                                     sentences=dev_sentences, criterion=loss_function, labelset=labelset)
-        logging.info('Epoch {}: Train loss {:.4f}, train f_macro {:.4f}, val_up loss {:.4f},  val_up f_macro {:.4f}, val loss {:.4f},  val f_macro {:.4f}'.format(epoch, total_loss.data.float()/len(seqs), train_results['macro'][2], dev_loss_up, dev_results_up['macro'][2], dev_loss, dev_results['macro'][2]))
+        if dev_results['macro'][2] > best_macro_f:
+            best_macro_f = dev_results['macro'][2]
+            best_epoch = epoch
+
+        logging.info('Epoch {}: Train loss {:.4f}, train f_macro {:.4f}, val_up loss {:.4f},  val_up f_macro {:.4f}, val loss {:.4f},  val f_macro {:.4f}, best_epoch {}, best val_f_macro {:.4f}'.format(epoch, total_loss.data.float()/len(seqs), train_results['macro'][2], dev_loss_up, dev_results_up['macro'][2], dev_loss, dev_results['macro'][2],
+                                                                                                                                                                                                          best_epoch, best_macro_f))
 
         logging.info('Summary train')
         logging.info(print_result_summary(train_results))
         logging.info('Summary dev')
         logging.info(print_result_summary(dev_results))
-        logging.info('Summary dev_up')
-        logging.info(print_result_summary(dev_results_up))
+        #logging.info('Summary dev_up')
+        #logging.info(print_result_summary(dev_results_up))
 
+    dev_results['best_epoch'] = best_epoch
+    dev_results['best_macro_f'] = best_macro_f
+    param_reader.write_results_and_hyperparams(args.result_csv, dev_results, vars(args))
     """
     # Prepare test data
     test_sentences = [prefix_sequence(sent, 'en') for sent in d['test']['seq']]
@@ -274,6 +250,14 @@ if __name__ == '__main__':
                         help="File with pre-trained embeddings")
     parser.add_argument('--max_vocab', type=int, default=-1,
                         help="Maximum number of words read in from the pretrained embeddings. -1 to disable")
-
+    parser.add_argument('--hyperparam_csv', type=str,
+                        default='../hyperparams.csv',
+                        help="File with hyperparams. If set, values for specified hyperparams are read from the csv")
+    parser.add_argument('--result_csv', type=str,
+                        default='../results.csv',
+                        help="File the results and hyperparams are written to")
+    parser.add_argument('--rowid', type=int,
+                        default=2,
+                        help="Row from which hyperparams are read")
     args = parser.parse_args()
     main(args)
