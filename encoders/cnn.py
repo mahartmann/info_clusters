@@ -109,7 +109,7 @@ def main(args):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
-    setup_logging()
+    setup_logging(logfile='log_cnn_{}.log'.format(args.rowid))
 
     log_params(vars(args))
 
