@@ -1,2 +1,2 @@
-seed,bs,epochs,emb_dim,num_feature_maps,ks,upsample,lr,dropout,max_vocab,additional_data,embs,micro_p,micro_r,micro_f,macro_p,macro_r,macro_f,1_p,1_r,1_f,2_p,2_r,2_f,3_p,3_r,3_f
-0,256,10,300,10,3,False,0.1,0.2,-1,False,True,0.832369942197,0.832369942197,0.832369942197,0.277456647399,0.333333333333,0.302839116719,0,0,0,0,0,0,0.832369942197,1.0,0.908517350158
+seed,bs,epochs,emb_dim,num_feature_maps,ks,upsample,lr,dropout,max_vocab,additional_data,embs,micro_p,micro_r,micro_f,macro_p,macro_r,macro_f,1_p,1_r,1_f,2_p,2_r,2_f,3_p,3_r,3_f,best_epoch,best_macro_f
+0,256,10,300,10,3,False,0.1,0.2,-1,False,True,0.8323699422,0.8323699422,0.8323699422,0.2774566474,0.3333333333,0.3028391167,0,0,0,0,0,0,0.8323699422,1,0.9085173502,,
