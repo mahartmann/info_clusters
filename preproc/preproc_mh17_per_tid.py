@@ -66,10 +66,10 @@ def dump_ner_output_to_file(fname, output, batch):
 
 def load_pointers(path):
     print('Loading TID to line mapping...')
-    start_load = time()
+
     with open(path, 'r', encoding='utf-8') as f:
         pointers = json.load(f)
-    print('Done. Took {0:.2f} seconds.'.format(time() - start_load))
+
     return pointers
 
 
@@ -82,7 +82,7 @@ def file_close(fp):
 
 
 def get_data(fp, n):
-    start_load = time()
+
     fp.seek(n)
     emb = fp.readline()
     tid = emb.split(',')[0].strip('"')
