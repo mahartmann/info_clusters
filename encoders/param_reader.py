@@ -31,7 +31,8 @@ def write_results_and_hyperparams(fname, results, params):
     for key in results['per_class'].keys():
         for i, m in enumerate(metrics):
             results_prefixed['{}_{}'.format(key, metrics[i])] = results['per_class'][key][i]
-
+    results_prefixed['best_epoch'] = results['best_epoch']
+    results_prefixed['best_macro_f'] = results['best_macro_f']
 
     with open(fname, 'r', encoding='utf-8') as csvfile:
         header_reader = csv.reader(itertools.islice(csvfile, 0, 1), delimiter=',', quotechar='"')

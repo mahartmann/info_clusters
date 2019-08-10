@@ -215,8 +215,9 @@ def main(args):
     dev_results['best_epoch'] = best_epoch
     dev_results['best_macro_f'] = best_macro_f
     param_reader.write_results_and_hyperparams(args.result_csv, dev_results, vars(args))
-    """
+
     # Prepare test data
+    """
     test_sentences = [prefix_sequence(sent, 'en') for sent in d['test']['seq']]
     test_labels = d['test']['label']
 
@@ -224,7 +225,22 @@ def main(args):
     test_golds, _ = prepare_labels(test_labels, labelset)
     test_loss, test_acc = evaluate_validation_set(model, test_seqs, test_golds, test_lengths, test_sentences, loss_function)
     logging.info('Epoch {}: Test loss {:.4f}, test acc {:.4f}'.format(epoch, test_loss, test_acc))
+    """
+    """
+    # prepare the data to be predicted
+    pred_data = load_json('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_ru.json')
+    test_sentences = [prefix_sequence(sent, 'ru') for sent in pred_data['seq']]
+    test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
+    y_pred = []
+    sents = []
+    for batch, targets, lengths, raw_data in seqs2minibatches(test_seqs, torch.LongTensor([0 for elm in test_seqs]), test_lengths, test_sentences, batch_size=1):
+        batch, targets, lengths = sort_batch(batch, targets, lengths)
+        pred = model(batch)
+        pred_idx = torch.max(pred, 1)[1]
+        y_pred += list(pred_idx.data.int())
+        sents += raw_data
 
+    write_file('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/predictions.txt', ['{}\t{}'.format(deprefix_sequence(sent), labelset[pred]) for sent, pred in zip(sents, y_pred)])
     """
 if __name__ == '__main__':
 
