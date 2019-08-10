@@ -123,10 +123,10 @@ class DataLoader(object):
 
 if __name__=="__main__":
 
-    infile = sys.argv[1]
-    outfile = sys.argv[2]
-    tid_file =sys.argv[3]
-    lang = sys.argv[4]
+
+    outfile = sys.argv[1]
+    tid_file =sys.argv[2]
+    lang = sys.argv[3]
 
     outfile = outfile +  '_{}'.format('added_by_tid')
 
@@ -152,47 +152,45 @@ if __name__=="__main__":
     c = 0
 
     dl = DataLoader()
-    with codecs.open(infile, 'r', 'utf-8') as f:
 
-        batch = []
-        for tweet in dl.load_tweets(tids):
 
-            tweet_id = tweet['tweetid']
-            tweet_text = tweet['tweet_text']
-            # replace twitter lingo
-            t = clean_text(repls, tweet_text)
-            #lower case hashtags
-            t = lowercase_hashtags(t)
-            #tokenize
-            doc = nlp(t)
-            tweet = []
-            for sentence in doc.sentences:
-                s = ' '.join([word.text for word in sentence.words])
-                tweet.append(s)
+    batch = []
+    for tweet in dl.load_tweets(tids):
 
-            tokenized_tweet = ' '.join(tweet)
-            tokenized_tweet_sent_sep = '#####'.join(tweet)
+        tweet_id = tweet['tweetid']
+        tweet_text = tweet['tweet_text']
+        # replace twitter lingo
+        t = clean_text(repls, tweet_text)
+        #lower case hashtags
+        t = lowercase_hashtags(t)
+        #tokenize
+        doc = nlp(t)
+        tweet = []
+        for sentence in doc.sentences:
+            s = ' '.join([word.text for word in sentence.words])
+            tweet.append(s)
 
-            #strip non alphanumerics, lowercase
-            cleaned_tokenized_tweet = ' '.join(
+        tokenized_tweet = ' '.join(tweet)
+        tokenized_tweet_sent_sep = '#####'.join(tweet)
+
+        #strip non alphanumerics, lowercase
+        cleaned_tokenized_tweet = ' '.join(
                 [tok.lower() for tok in tokenized_tweet_sent_sep.split(' ') if isalpha_or_hash(tok)])
 
-            if len(cleaned_tokenized_tweet) > 0:
-                batch.append((tokenized_tweet_sent_sep, cleaned_tokenized_tweet, tweet_text, tweet_id))
-            # ner
-            if len(batch) >= minibatch_size:
+        if len(cleaned_tokenized_tweet) > 0:
+            batch.append((tokenized_tweet_sent_sep, cleaned_tokenized_tweet, tweet_text, tweet_id))
+        # ner
+        if len(batch) >= minibatch_size:
 
 
-                output = ner_model([elm[0] for elm in batch])
-                dump_ner_output_to_file(outfile, output, batch)
-                batch = []
+            output = ner_model([elm[0] for elm in batch])
+            dump_ner_output_to_file(outfile, output, batch)
+            batch = []
 
 
-            c += 1
-            if c % 1000 == 0:
-                logging.info('---> Processed {}'.format(c))
+        c += 1
+        if c % 1000 == 0:
+            logging.info('---> Processed {}'.format(c))
 
+    dump_ner_output_to_file(outfile, output, batch)
 
-
-        dump_ner_output_to_file(outfile, output, batch)
-    f.close()
