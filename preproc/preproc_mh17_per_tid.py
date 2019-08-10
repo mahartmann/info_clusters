@@ -97,7 +97,7 @@ class DataLoader(object):
 
     def __init__(self):
         self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
-        self.config.read('../config.cfg')
+        self.config.read('/home/lwp876/ira/code/info_clusters/config.cfg')
 
         self.data_file, self.pointers = self._load_tweets()
         self.header = ["tweetid", "userid", "tweet_time", "reply-tweetid", "reply-userid", "source", "truncated?",
