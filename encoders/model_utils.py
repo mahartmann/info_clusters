@@ -11,8 +11,10 @@ import subprocess
 import random
 import argparse
 
-from info_clusters.encoders.lstm import UNK
+#from info_clusters.encoders.lstm import UNK
 from info_clusters.myutils import read_file, write_file
+
+UNK='UNK'
 
 class PaddedTensorDataset(Dataset):
     """Dataset wrapping data, target and length tensors.
@@ -299,16 +301,6 @@ def get_exp_path(exp_path, exp_name, exp_id):
         subprocess.Popen("mkdir {}".format(exp_path), shell=True).wait()
     return exp_path
 
-
-if __name__=="__main__":
-    fname = '/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/resources/mh17_60_20_20_embs.txt'
-    prefix = 'en'
-
-    lines = read_file(fname)
-    outlines = ['{}:{}'.format(prefix, line) for line in lines]
-    write_file(fname + 'prefixed', outlines)
-
-
 def p_r_f(gold, preds, labelset):
     results = {}
     results['macro'] = precision_recall_fscore_support(gold, preds, average='macro')
@@ -339,3 +331,14 @@ def print_result_summary(results):
 def log_params(args):
     for key in sorted(args.keys()):
         logging.info('{}: {}'.format(key, args[key]))
+
+
+if __name__=="__main__":
+    fname = '/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/resources/mh17_60_20_20_vocab_extended_embs.txt'
+    prefix = 'en'
+
+    lines = read_file(fname)
+    outlines = ['{}:{}'.format(prefix, line) for line in lines]
+    write_file(fname + 'prefixed', outlines)
+
+

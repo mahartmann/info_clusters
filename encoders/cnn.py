@@ -105,7 +105,7 @@ def main(args):
     use_pretrained_embeddings = args.embs
     datafile = args.data
     max_vocab = args.max_vocab
-    use_additional_data = args.additional_data
+    additional_data_file = args.additional_data
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -127,8 +127,8 @@ def main(args):
 
     d = load_json(datafile)
 
-    if use_additional_data is True:
-        additional_data_file = config.get('Files', 'additional_data')
+    if additional_data_file != '':
+        additional_data_file = config.get('Files', 'additional_data_{}'.format(args.additional_data))
         logging.info('Loading additional data from {}'.format(additional_data_file))
         additional_data = load_json(additional_data_file)
     else:
@@ -248,9 +248,10 @@ if __name__ == '__main__':
           description='Tweet classification using CNN')
     parser.add_argument('--data', type=str, default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_60_20_20.json',
                             help="File with main data")
-    parser.add_argument('--additional_data', type=bool,
-                        default=True,
-                        help="Use additional train data. Location of the data is specified in the config")
+    parser.add_argument('--additional_data', type=str,
+                        default='combi',
+                        choices = ['', 'combi', 'sbil', 'skaschi'],
+                        help="Additional train data. if empty string, no additional data is used")
     parser.add_argument('--config', type=str, default='config.cfg',
                         help="Config file")
     parser.add_argument('--exp_dir', type=str, default='out',
@@ -281,10 +282,10 @@ if __name__ == '__main__':
                         default='../hyperparams.csv',
                         help="File with hyperparams. If set, values for specified hyperparams are read from the csv")
     parser.add_argument('--result_csv', type=str,
-                        default='../results.csv',
+                        default='../results_pc.csv',
                         help="File the results and hyperparams are written to")
     parser.add_argument('--rowid', type=int,
-                        default=2,
+                        default=5,
                         help="Row from which hyperparams are read")
     args = parser.parse_args()
     main(args)
