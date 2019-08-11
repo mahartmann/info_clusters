@@ -6,6 +6,7 @@ import configparser
 from info_clusters.encoders import param_reader
 from info_clusters.encoders.model_utils import *
 from info_clusters.encoders.model_utils import p_r_f, print_result_summary, log_params
+import uuid
 
 UNK = 'UNK'
 
@@ -70,7 +71,7 @@ def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, l
     y_true = list()
     y_pred = list()
     total_loss = 0
-    for batch, targets, lengths, raw_data in seqs2minibatches(seqs, golds, lengths, sentences, batch_size=1):
+    for batch, targets, lengths, raw_data, _ in seqs2minibatches(seqs, golds, lengths, sentences, batch_size=1):
 
         batch, targets, lengths = sort_batch(batch, targets, lengths)
         pred = model(batch)
@@ -84,6 +85,28 @@ def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, l
     results = p_r_f(y_true, y_pred, labelset)
 
     return total_loss.data.float()/len(seqs), results
+
+
+def write_predictions(model, seqs, golds, lengths, sentences, tidss, labelset, fname):
+    y_true = list()
+    y_pred = list()
+    raw = []
+    tids = []
+
+    for batch, targets, lengths, raw_batch, tids_batch in seqs2minibatches(seqs, golds, lengths, sentences, tids=tidss, batch_size=1):
+        pred = model(batch)
+        pred_idx = torch.max(pred, 1)[1]
+        y_true += list(targets.int())
+        y_pred += list(pred_idx.data.int())
+        raw += raw_batch
+        tids += tids_batch
+
+    outlines = [['tid', 'seq', 'gold', 'pred', 'TP']]
+
+    for tid, sent, gold, pred in zip(tids, raw, y_true, y_pred):
+        outlines.append(['#'+tid, sent, labelset[gold], labelset[pred], int(gold==pred)])
+    param_reader.write_csv(fname, outlines)
+    return outlines
 
 
 def main(args):
@@ -110,7 +133,9 @@ def main(args):
     torch.manual_seed(seed)
     np.random.seed(seed)
     setup_logging(logfile='log_cnn_{}.log'.format(args.rowid))
+    pred_file = os.path.join(args.pred_dir, uuid.uuid4().hex)
 
+    vars(args).update({'pred_file':pred_file})
     log_params(vars(args))
 
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
@@ -143,7 +168,8 @@ def main(args):
 
     dev_sentences = [prefix_sequence(sent, 'en') for sent in d['dev']['seq']]
     dev_labels = d['dev']['label']
-
+    dev_tids = d['dev']['tid']
+    dev_raw_sentences = d['dev']['seq']
 
     # prepare train set
     seqs, lengths, word2idx = feature_extractor(sentences, word2idx)
@@ -155,10 +181,7 @@ def main(args):
     dev_seqs, dev_lengths, _ = feature_extractor(dev_sentences, word2idx)
     dev_golds, _ = prepare_labels(dev_labels, labelset)
 
-    # upsample the dev data
-    dev_sentences_upsampled, dev_labels_upsampled = upsample(dev_sentences, dev_labels)
-    dev_seqs_upsampled, dev_lengths_upsampled, _ = sents2seqs(dev_sentences, word2idx)
-    dev_golds_upsampled, _ = prepare_labels(dev_labels_upsampled, labelset)
+
 
 
     model = CNN(embedding_dim=embedding_dim, num_feature_maps=num_feature_maps, pretrained_embeddings=pretrained_embeddings, kernel_size=kernel_size,
@@ -178,7 +201,7 @@ def main(args):
         preds = []
         gold_labels = []
         total_loss = 0
-        for seqs_batch, gold_batch, lengths_batch, raw_batch in seqs2minibatches(seqs, golds, lengths, sentences, batch_size=batch_size):
+        for seqs_batch, gold_batch, lengths_batch, raw_batch, _ in seqs2minibatches(seqs, golds, lengths, sentences, batch_size=batch_size):
             seqs_batch, gold_batch, lengths_batch = sort_batch(seqs_batch, gold_batch, lengths_batch)
             model.zero_grad()
             out = model(seqs_batch)
@@ -194,15 +217,14 @@ def main(args):
         # predict the train data
         train_results = p_r_f(gold_labels, preds, labelset)
         # predict the val data
-        dev_loss_up, dev_results_up = evaluate_validation_set(model=model, seqs=dev_seqs_upsampled, golds=dev_golds_upsampled, lengths=dev_lengths_upsampled,
-                                                    sentences=dev_sentences_upsampled, criterion=loss_function, labelset=labelset)
+
         dev_loss, dev_results = evaluate_validation_set(model=model, seqs=dev_seqs, golds=dev_golds, lengths=dev_lengths,
                                                     sentences=dev_sentences, criterion=loss_function, labelset=labelset)
         if dev_results['macro'][2] > best_macro_f:
             best_macro_f = dev_results['macro'][2]
             best_epoch = epoch
 
-        logging.info('Epoch {}: Train loss {:.4f}, train f_macro {:.4f}, val_up loss {:.4f},  val_up f_macro {:.4f}, val loss {:.4f},  val f_macro {:.4f}, best_epoch {}, best val_f_macro {:.4f}'.format(epoch, total_loss.data.float()/len(seqs), train_results['macro'][2], dev_loss_up, dev_results_up['macro'][2], dev_loss, dev_results['macro'][2],
+        logging.info('Epoch {}: Train loss {:.4f}, train f_macro {:.4f}, val loss {:.4f},  val f_macro {:.4f}, best_epoch {}, best val_f_macro {:.4f}'.format(epoch, total_loss.data.float()/len(seqs), train_results['macro'][2], dev_loss, dev_results['macro'][2],
                                                                                                                                                                                                           best_epoch, best_macro_f))
 
         logging.info('Summary train')
@@ -226,22 +248,13 @@ def main(args):
     test_loss, test_acc = evaluate_validation_set(model, test_seqs, test_golds, test_lengths, test_sentences, loss_function)
     logging.info('Epoch {}: Test loss {:.4f}, test acc {:.4f}'.format(epoch, test_loss, test_acc))
     """
-    """
+
     # prepare the data to be predicted
     pred_data = load_json('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_ru.json')
-    test_sentences = [prefix_sequence(sent, 'ru') for sent in pred_data['seq']]
-    test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
-    y_pred = []
-    sents = []
-    for batch, targets, lengths, raw_data in seqs2minibatches(test_seqs, torch.LongTensor([0 for elm in test_seqs]), test_lengths, test_sentences, batch_size=1):
-        batch, targets, lengths = sort_batch(batch, targets, lengths)
-        pred = model(batch)
-        pred_idx = torch.max(pred, 1)[1]
-        y_pred += list(pred_idx.data.int())
-        sents += raw_data
 
-    write_file('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/predictions.txt', ['{}\t{}'.format(deprefix_sequence(sent), labelset[pred]) for sent, pred in zip(sents, y_pred)])
-    """
+
+    write_predictions(model, dev_seqs, dev_golds, dev_lengths, dev_raw_sentences, dev_tids, labelset, pred_file)
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
@@ -284,8 +297,11 @@ if __name__ == '__main__':
     parser.add_argument('--result_csv', type=str,
                         default='../results_pc.csv',
                         help="File the results and hyperparams are written to")
+    parser.add_argument('--pred_dir', type=str,
+                        default='predictions',
+                        help="Directory storing the prediction files")
     parser.add_argument('--rowid', type=int,
-                        default=5,
+                        default=2,
                         help="Row from which hyperparams are read")
     args = parser.parse_args()
     main(args)

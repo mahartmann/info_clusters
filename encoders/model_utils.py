@@ -27,15 +27,16 @@ class PaddedTensorDataset(Dataset):
         raw_data (Any): The data that has been transformed into tensor, useful for debugging
     """
 
-    def __init__(self, data_tensor, target_tensor, length_tensor, raw_data):
+    def __init__(self, data_tensor, target_tensor, length_tensor, raw_data, tids):
         assert data_tensor.size(0) == target_tensor.size(0) == length_tensor.size(0)
         self.data_tensor = data_tensor
         self.target_tensor = target_tensor
         self.length_tensor = length_tensor
         self.raw_data = raw_data
+        self.tids = tids
 
     def __getitem__(self, index):
-        return self.data_tensor[index], self.target_tensor[index], self.length_tensor[index], self.raw_data[index]
+        return self.data_tensor[index], self.target_tensor[index], self.length_tensor[index], self.raw_data[index], self.tids[index]
 
     def __len__(self):
         return self.data_tensor.size(0)
@@ -90,6 +91,8 @@ def load_json(fname):
     return j
 
 
+
+
 def prepare_labels(labels, labelset):
     if labelset is None:
         labelset = list(set(labels))
@@ -141,9 +144,11 @@ def pad_sequences(vectorized_seqs, seq_lengths):
     return seq_tensor
 
 
-def seqs2minibatches(seqs, golds, lengths, raw_sents, batch_size):
+def seqs2minibatches(seqs, golds, lengths, raw_sents, batch_size, tids=[]):
     padded_seqs = pad_sequences(seqs, lengths)
-    return DataLoader(PaddedTensorDataset(padded_seqs, golds, lengths, raw_sents), batch_size=batch_size)
+    if len(tids) == 0:
+        tids = [0 for elm in raw_sents]
+    return DataLoader(PaddedTensorDataset(padded_seqs, golds, lengths, raw_sents, tids), batch_size=batch_size)
 
 
 def sents2seqs(sents, feat2idx, lower=True):

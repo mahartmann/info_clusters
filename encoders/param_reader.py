@@ -62,6 +62,13 @@ def bool_flag(s):
     raise argparse.ArgumentTypeError("invalid value for a boolean flag (0 or 1)")
 
 
+def write_csv(fname, data):
+    with open(fname, 'w', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',', quotechar='"')
+        for row in data:
+            writer.writerow(row)
+    csvfile.close()
+
 if __name__=="__main__":
     params = read_hyperparams_from_csv('../hyperparams.csv', 2)
 
