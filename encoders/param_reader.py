@@ -1,6 +1,7 @@
 import csv
 import itertools
 import argparse
+import numpy as np
 
 
 def read_hyperparams_from_csv(fname, rowid):
@@ -20,17 +21,26 @@ def read_hyperparams_from_csv(fname, rowid):
     return params
 
 
-def write_results_and_hyperparams(fname, results, params):
+def write_results_and_hyperparams(fname, results, params, labelset):
 
     metrics = ['p', 'r', 'f']
     results_prefixed = {}
     for key in ['macro', 'micro']:
         for i, m in enumerate(metrics):
             results_prefixed['{}_{}'.format(key, metrics[i])] = results[key][i]
-
+    for label, val in results['aucs'].items():
+        results_prefixed['{}_auc'.format(label)] = val
+    results_prefixed['macro_auc'] = np.mean(list(results['aucs'].values()))
     for key in results['per_class'].keys():
         for i, m in enumerate(metrics):
             results_prefixed['{}_{}'.format(key, metrics[i])] = results['per_class'][key][i]
+
+    # add cm results
+    for i, label_i in enumerate(labelset):
+        for j, label_j in enumerate(labelset):
+            results_prefixed['cm_{}{}'.format(label_i, label_j)] = results['cm'][i][j]
+
+
     results_prefixed['best_epoch'] = results['best_epoch']
     results_prefixed['best_macro_f'] = results['best_macro_f']
 

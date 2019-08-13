@@ -6,6 +6,7 @@ import configparser
 from info_clusters.encoders import param_reader
 from info_clusters.encoders.model_utils import *
 from info_clusters.encoders.model_utils import p_r_f, print_result_summary, log_params
+from sklearn.metrics import confusion_matrix
 import uuid
 
 UNK = 'UNK'
@@ -45,7 +46,7 @@ class CNN(nn.Module):
         embedded_seqs_transposed = embedded_seqs.transpose(dim0=1, dim1=2)
 
         # convolution
-        out = self.conv(embedded_seqs_transposed)
+        out = torch.nn.ReLU()(self.conv(embedded_seqs_transposed))
 
         # max pooling
         pooled_output = nn.MaxPool1d(kernel_size=x.data.shape[-1])(out)
@@ -67,23 +68,29 @@ class CNN(nn.Module):
 
 
 
-def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, labelset):
+def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, labelset, compute_auc=False):
     y_true = list()
     y_pred = list()
+    y_probs = list()
     total_loss = 0
     for batch, targets, lengths, raw_data, _ in seqs2minibatches(seqs, golds, lengths, sentences, batch_size=1):
 
         batch, targets, lengths = sort_batch(batch, targets, lengths)
         pred = model(batch)
-
         loss = criterion(pred, targets)
         pred_idx = torch.max(pred, 1)[1]
+        y_probs.append(torch.exp(pred))
         y_true += list(targets.int())
         y_pred += list(pred_idx.data.int())
         total_loss += loss
 
     results = p_r_f(y_true, y_pred, labelset)
-
+    cm = confusion_matrix(y_true, y_pred, labels=[i for i in range(len(labelset))])
+    results['cm']= cm
+    if compute_auc is True:
+        y_true = [int(elm) for elm in y_true]
+        aucs, precs, recs, thr = get_auc(y_true, torch.cat(y_probs, dim=0).detach().numpy(), labelset)
+        results['aucs'] = aucs
     return total_loss.data.float()/len(seqs), results
 
 
@@ -132,8 +139,10 @@ def main(args):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
-    setup_logging(logfile='log_cnn_{}.log'.format(args.rowid))
-    pred_file = os.path.join(args.pred_dir, uuid.uuid4().hex)
+
+    random_name = uuid.uuid4().hex
+    setup_logging(logfile='{}.log'.format(random_name))
+    pred_file = os.path.join(args.pred_dir, '{}.preds'.format(random_name))
 
     vars(args).update({'pred_file':pred_file})
     log_params(vars(args))
@@ -189,7 +198,8 @@ def main(args):
     loss_function = nn.NLLLoss()
     optimizer = optim.SGD(model.parameters(), lr=lr)
 
-    dev_loss, results = evaluate_validation_set(model=model, seqs=dev_seqs, golds=dev_golds, lengths=dev_lengths, sentences=dev_sentences, criterion=loss_function, labelset=labelset)
+    dev_loss, results = evaluate_validation_set(model=model, seqs=dev_seqs, golds=dev_golds, lengths=dev_lengths,
+                                                sentences=dev_sentences, criterion=loss_function, labelset=labelset)
 
     logging.info('Epoch {}: val f_macro {:.4f}'.format(-1, results['macro'][2]))
     logging.info('Summary val')
@@ -231,12 +241,19 @@ def main(args):
         logging.info(print_result_summary(train_results))
         logging.info('Summary dev')
         logging.info(print_result_summary(dev_results))
+
         #logging.info('Summary dev_up')
         #logging.info(print_result_summary(dev_results_up))
 
+    dev_loss, dev_results = evaluate_validation_set(model=model, seqs=dev_seqs, golds=dev_golds,
+                                                              lengths=dev_lengths,
+                                                              sentences=dev_sentences, criterion=loss_function,
+                                                              labelset=labelset, compute_auc=True)
+    logging.info(print_auc_summary(dev_results['aucs'], labelset))
+
     dev_results['best_epoch'] = best_epoch
     dev_results['best_macro_f'] = best_macro_f
-    param_reader.write_results_and_hyperparams(args.result_csv, dev_results, vars(args))
+    param_reader.write_results_and_hyperparams(args.result_csv, dev_results, vars(args), labelset)
 
     # Prepare test data
     """
@@ -300,6 +317,9 @@ if __name__ == '__main__':
     parser.add_argument('--pred_dir', type=str,
                         default='predictions',
                         help="Directory storing the prediction files")
+    parser.add_argument('--activation', type=str,
+                        default='', choices = ['', 'relu'],
+                        help="Activation function")
     parser.add_argument('--rowid', type=int,
                         default=2,
                         help="Row from which hyperparams are read")

@@ -10,6 +10,8 @@ import numpy as np
 import subprocess
 import random
 import argparse
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import auc
 
 #from info_clusters.encoders.lstm import UNK
 from info_clusters.myutils import read_file, write_file
@@ -93,7 +95,11 @@ def load_json(fname):
 
 
 
-def prepare_labels(labels, labelset):
+def prepare_labels(labels, labelset, binary=False):
+
+    # if binary is True, make a binary labelset with {'1', '2'} --> '1' and '3' --> '0'
+    if binary is True:
+        labels = ['0' if label == '3' else '1' for label in labels]
     if labelset is None:
         labelset = list(set(labels))
     labelset = sorted(labelset)
@@ -323,6 +329,27 @@ def p_r_f(gold, preds, labelset):
             results['per_class'][label] = [0 for elm in results['macro']]
     return results
 
+def get_auc(gold, probs, labelset):
+    # iterate through classes and simulate 1 vs all binary prediction
+    gold_binary = []
+    probs_binary = []
+    aucs = {}
+    precs = {}
+    recs = {}
+    thr = {}
+    for i, label in enumerate(labelset):
+        for g, p, in zip(gold, probs):
+            if g==i:
+                gold_binary.append(1)
+            else: gold_binary.append(0)
+            probs_binary.append(p[i])
+        precision, recall, thresholds = precision_recall_curve(gold_binary, probs_binary)
+        auc_score = auc(recall, precision)
+        thr[label] = thresholds
+        aucs[label] = auc_score
+        precs[label] = precision
+        recs[label] = recall
+    return aucs, precs, recs, thr
 
 def print_result_summary(results):
     s =  '\nLabel\tP\tR\tF\t\nMacro\t{:.4f}\t{:.4f}\t{:.4f}\nMicro\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(results['macro'][0],results['macro'][1],results['macro'][2],
@@ -330,7 +357,20 @@ def print_result_summary(results):
     labels = sorted(results['per_class'].keys())
     for label in labels:
         s += '{}\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(label, results['per_class'][label][0],results['per_class'][label][1],results['per_class'][label][2])
+    if 'cm' in results:
+        s += '{}'.format(results['cm'])
     return s
+
+def print_auc_summary(aucs, labelset):
+    s = 'AUC (precision-recall)\n'
+    for label in labelset:
+        s += '{}\t{:.4f}\n'.format(label, aucs[label])
+    avg = np.mean(list(aucs.values()))
+    avg12 = np.mean([aucs['1'], aucs['2']])
+    s += 'Macro AUC: {:.4f}\n'.format(avg)
+    s += '12 AUC: {:.4f}'.format(avg12)
+    return s
+
 
 
 def log_params(args):
