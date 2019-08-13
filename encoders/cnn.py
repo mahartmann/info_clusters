@@ -267,7 +267,7 @@ def main(args):
     """
 
     # prepare the data to be predicted
-    pred_data = load_json('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_ru.json')
+    #pred_data = load_json('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_ru.json')
 
 
     write_predictions(model, dev_seqs, dev_golds, dev_lengths, dev_raw_sentences, dev_tids, labelset, pred_file)
