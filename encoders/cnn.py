@@ -291,7 +291,7 @@ def main(args):
         test_loss, test_results = evaluate_validation_set(model=model, seqs=test_seqs, golds=test_golds,
                                                         lengths=test_lengths,
                                                         sentences=test_sentences, criterion=loss_function,
-                                                        labelset=labelset)
+                                                        labelset=labelset, compute_auc=True)
         logging.info('Summary test')
         logging.info(print_result_summary(test_results))
         param_reader.write_results_and_hyperparams(args.test_result_csv, test_results, vars(args), labelset)
@@ -366,13 +366,13 @@ if __name__ == '__main__':
                         default='', choices = ['', 'relu'],
                         help="Activation function")
     parser.add_argument('--rowid', type=int,
-                        default=2,
+                        default=4,
                         help="Row from which hyperparams are read")
-    parser.add_argument('--predict_test', type=bool,
-                        default=False,
-                        help="Predict the test set")
-    parser.add_argument('--predict_all', type=bool,
+    parser.add_argument('--predict_test', type=bool_flag,
                         default=True,
+                        help="Predict the test set")
+    parser.add_argument('--predict_all', type=bool_flag,
+                        default=False,
                         help="Predict the set of all tweets")
     args = parser.parse_args()
     main(args)
