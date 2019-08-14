@@ -280,7 +280,7 @@ if __name__ == '__main__':
                             help="File with main data")
     parser.add_argument('--additional_data', type=str,
                         default='combi',
-                        choices = ['', 'combi', 'sbil', 'skaschi'],
+                        choices = ['', 'combi', 'sbil', 'skaschi', 'samo'],
                         help="Additional train data. if empty string, no additional data is used")
     parser.add_argument('--config', type=str, default='config.cfg',
                         help="Config file")
