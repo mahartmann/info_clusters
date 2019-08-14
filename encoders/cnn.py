@@ -130,7 +130,7 @@ def write_predictions(model, seqs, golds, lengths, sentences, tidss, labelset, f
     if write_probs is True:
         outlines[0].extend(labelset)
         for pred, outline in zip(preds, outlines[1:]):
-            print(pred)
+            
             outline.extend([elm for elm in pred[0]])
 
     param_reader.write_csv(fname, outlines)
