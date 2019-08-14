@@ -130,7 +130,7 @@ def write_predictions(model, seqs, golds, lengths, sentences, tidss, labelset, f
     if write_probs is True:
         outlines[0].extend(labelset)
         for pred, outline in zip(preds, outlines[1:]):
-            
+
             outline.extend([elm for elm in pred[0]])
 
     param_reader.write_csv(fname, outlines)
@@ -296,7 +296,7 @@ def main(args):
         logging.info(print_result_summary(test_results))
         param_reader.write_results_and_hyperparams(args.test_result_csv, test_results, vars(args), labelset)
         write_predictions(model, test_seqs, test_golds, test_lengths, test_raw_sentences, test_tids, labelset, pred_file + '.test',
-                          write_probs=False)
+                          write_probs=True)
 
     if args.predict_all is True:
         # prepare the data to be predicted
