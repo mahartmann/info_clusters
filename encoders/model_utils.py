@@ -268,8 +268,11 @@ def load_embeddings_from_file(fname, max_vocab=-1):
 
     return embeddings, word2id, id2word
 
-def prefix_sequence(seq, prefix):
-    return ' '.join(['{}:{}'.format(prefix, elm) for elm in seq.split()])
+def prefix_sequence(seq, prefix, strip_hs):
+    if strip_hs is True:
+        return ' '.join(['{}:{}'.format(prefix, elm.strip('#')) for elm in seq.split()])
+    else:
+        return ' '.join(['{}:{}'.format(prefix, elm) for elm in seq.split()])
 
 def deprefix_sequence(seq):
     return ' '.join([elm.split(':')[-1] for elm in seq.split()])

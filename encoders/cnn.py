@@ -190,7 +190,7 @@ def main(args):
         additional_data = load_json(additional_data_file)
     else:
         additional_data = {'seq':[], 'label':[]}
-    sentences = [prefix_sequence(sent, 'en') for sent in d['train']['seq']] + [prefix_sequence(sent, 'ru') for sent in additional_data['seq']]
+    sentences = [prefix_sequence(sent, 'en', strip_hs=args.strip) for sent in d['train']['seq']] + [prefix_sequence(sent, 'ru', strip_hs=args.strip) for sent in additional_data['seq']]
     labels = d['train']['label'] + additional_data['label']
 
     if args.upsample is True:
@@ -198,7 +198,7 @@ def main(args):
         sentences, labels = upsample(sentences, labels)
 
 
-    dev_sentences = [prefix_sequence(sent, 'en') for sent in d['dev']['seq']]
+    dev_sentences = [prefix_sequence(sent, 'en', strip_hs=args.strip) for sent in d['dev']['seq']]
     dev_labels = d['dev']['label']
     dev_tids = d['dev']['tid']
     dev_raw_sentences = d['dev']['seq']
@@ -281,7 +281,7 @@ def main(args):
 
     if args.predict_test is True:
         # Prepare test data
-        test_sentences = [prefix_sequence(sent, 'en') for sent in d['test']['seq']]
+        test_sentences = [prefix_sequence(sent, 'en', strip_hs=args.strip) for sent in d['test']['seq']]
         test_labels = d['test']['label']
 
         test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
@@ -301,7 +301,7 @@ def main(args):
     if args.predict_all is True:
         # prepare the data to be predicted
         pred_data = load_json(config.get('Files', 'unlabeled'))
-        test_sentences = [prefix_sequence(sent, 'en') for sent in pred_data['seq']]
+        test_sentences = [prefix_sequence(sent, 'en', strip_hs=args.strip) for sent in pred_data['seq']]
         test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
 
         test_tids = pred_data['tid']
@@ -366,7 +366,7 @@ if __name__ == '__main__':
                         default='', choices = ['', 'relu'],
                         help="Activation function")
     parser.add_argument('--rowid', type=int,
-                        default=4,
+                        default=2,
                         help="Row from which hyperparams are read")
     parser.add_argument('--predict_test', type=bool_flag,
                         default=True,
@@ -374,5 +374,8 @@ if __name__ == '__main__':
     parser.add_argument('--predict_all', type=bool_flag,
                         default=False,
                         help="Predict the set of all tweets")
+    parser.add_argument('--strip', type=bool_flag,
+                        default=True,
+                        help="Strip hashtags from words to attempt reducing oov")
     args = parser.parse_args()
     main(args)
