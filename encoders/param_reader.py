@@ -40,7 +40,6 @@ def write_results_and_hyperparams(fname, results, params, labelset):
         for j, label_j in enumerate(labelset):
             results_prefixed['cm_{}{}'.format(label_i, label_j)] = results['cm'][i][j]
 
-
     results_prefixed['best_epoch'] = results['best_epoch']
     results_prefixed['best_macro_f'] = results['best_macro_f']
 

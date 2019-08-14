@@ -94,14 +94,28 @@ def evaluate_validation_set(model, seqs, golds, lengths, sentences ,criterion, l
     return total_loss.data.float()/len(seqs), results
 
 
-def write_predictions(model, seqs, golds, lengths, sentences, tidss, labelset, fname):
+def write_predictions(model, seqs, golds, lengths, sentences, tidss, labelset, fname, write_probs=False):
+    """
+
+    :param model:
+    :param seqs:
+    :param golds:
+    :param lengths:
+    :param sentences:
+    :param tidss:
+    :param labelset:
+    :param fname:
+    :param write_probs: if True, write the prediction probabilities
+    :return:
+    """
     y_true = list()
     y_pred = list()
     raw = []
     tids = []
-
+    preds = []
     for batch, targets, lengths, raw_batch, tids_batch in seqs2minibatches(seqs, golds, lengths, sentences, tids=tidss, batch_size=1):
         pred = model(batch)
+        preds.append(torch.exp(pred).detach().numpy())
         pred_idx = torch.max(pred, 1)[1]
         y_true += list(targets.int())
         y_pred += list(pred_idx.data.int())
@@ -112,8 +126,17 @@ def write_predictions(model, seqs, golds, lengths, sentences, tidss, labelset, f
 
     for tid, sent, gold, pred in zip(tids, raw, y_true, y_pred):
         outlines.append(['#'+tid, sent, labelset[gold], labelset[pred], int(gold==pred)])
+
+    if write_probs is True:
+        outlines[0].extend(labelset)
+        for pred, outline in zip(preds, outlines[1:]):
+            print(pred)
+            outline.extend([elm for elm in pred[0]])
+
     param_reader.write_csv(fname, outlines)
     return outlines
+
+
 
 
 def main(args):
@@ -254,23 +277,42 @@ def main(args):
     dev_results['best_epoch'] = best_epoch
     dev_results['best_macro_f'] = best_macro_f
     param_reader.write_results_and_hyperparams(args.result_csv, dev_results, vars(args), labelset)
+    write_predictions(model, dev_seqs, dev_golds, dev_lengths, dev_raw_sentences, dev_tids, labelset, pred_file, write_probs=False)
 
-    # Prepare test data
-    """
-    test_sentences = [prefix_sequence(sent, 'en') for sent in d['test']['seq']]
-    test_labels = d['test']['label']
+    if args.predict_test is True:
+        # Prepare test data
+        test_sentences = [prefix_sequence(sent, 'en') for sent in d['test']['seq']]
+        test_labels = d['test']['label']
 
-    test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
-    test_golds, _ = prepare_labels(test_labels, labelset)
-    test_loss, test_acc = evaluate_validation_set(model, test_seqs, test_golds, test_lengths, test_sentences, loss_function)
-    logging.info('Epoch {}: Test loss {:.4f}, test acc {:.4f}'.format(epoch, test_loss, test_acc))
-    """
+        test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
+        test_golds, _ = prepare_labels(test_labels, labelset)
+        test_tids = d['test']['tid']
+        test_raw_sentences = d['test']['seq']
+        test_loss, test_results = evaluate_validation_set(model=model, seqs=test_seqs, golds=test_golds,
+                                                        lengths=test_lengths,
+                                                        sentences=test_sentences, criterion=loss_function,
+                                                        labelset=labelset)
+        logging.info('Summary test')
+        logging.info(print_result_summary(test_results))
+        param_reader.write_results_and_hyperparams(args.test_result_csv, test_results, vars(args), labelset)
+        write_predictions(model, test_seqs, test_golds, test_lengths, test_raw_sentences, test_tids, labelset, pred_file + '.test',
+                          write_probs=False)
 
-    # prepare the data to be predicted
-    #pred_data = load_json('/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_ru.json')
+    if args.predict_all is True:
+        # prepare the data to be predicted
+        pred_data = load_json(config.get('Files', 'unlabeled'))
+        test_sentences = [prefix_sequence(sent, 'en') for sent in pred_data['seq']]
+        test_seqs, test_lengths, _ = feature_extractor(test_sentences, word2idx)
+
+        test_tids = pred_data['tid']
+        test_raw_sentences = pred_data['seq']
+        logging.info('Predicting the unlabeled data')
+        write_predictions(model, test_seqs, torch.LongTensor(np.array([0 for elm in test_seqs])), test_lengths, test_raw_sentences, test_tids, labelset,
+                          pred_file + '.unlabeled',
+                          write_probs=True)
 
 
-    write_predictions(model, dev_seqs, dev_golds, dev_lengths, dev_raw_sentences, dev_tids, labelset, pred_file)
+
 
 if __name__ == '__main__':
 
@@ -314,6 +356,9 @@ if __name__ == '__main__':
     parser.add_argument('--result_csv', type=str,
                         default='../results_pc.csv',
                         help="File the results and hyperparams are written to")
+    parser.add_argument('--test_result_csv', type=str,
+                        default='../results_pc_test.csv',
+                        help="File the results and hyperparams are written to")
     parser.add_argument('--pred_dir', type=str,
                         default='predictions',
                         help="Directory storing the prediction files")
@@ -323,5 +368,11 @@ if __name__ == '__main__':
     parser.add_argument('--rowid', type=int,
                         default=2,
                         help="Row from which hyperparams are read")
+    parser.add_argument('--predict_test', type=bool,
+                        default=False,
+                        help="Predict the test set")
+    parser.add_argument('--predict_all', type=bool,
+                        default=True,
+                        help="Predict the set of all tweets")
     args = parser.parse_args()
     main(args)
