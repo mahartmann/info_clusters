@@ -38,6 +38,12 @@ def lowercase_hashtags(s):
     """
     return ' '.join([elm.lower() if elm.startswith('#') else elm for elm in s.split(' ')])
 
+def strip_hashtags(s):
+    """
+    lowercase all hashtags to prevent them from being tokenized by stanfordnlp
+    """
+    return ' '.join([elm.strip('#') for elm in s.split(' ')])
+
 def isalpha_or_hash(s):
     """
     returns True the word is alphanumeric in the sense of pythons isalpha
@@ -107,25 +113,24 @@ if __name__=="__main__":
                     tweet_id = row.split('\t')[0]
                     tweet_text = row.split('\t')[9]
                     # replace twitter lingo
-                    t = clean_text(repls, tweet_text)
-                    #lower case hashtags
-                    t = lowercase_hashtags(t)
+                    cleaned_text = clean_text(repls, tweet_text)
+                    #strip hashtags
+                    cleaned_text_stripped_hs = strip_hashtags(cleaned_text)
                     #tokenize
-                    doc = nlp(t)
+                    doc = nlp(cleaned_text_stripped_hs)
                     tweet = []
                     for sentence in doc.sentences:
                         s = ' '.join([word.text for word in sentence.words])
                         tweet.append(s)
 
                     tokenized_tweet = ' '.join(tweet)
-                    tokenized_tweet_sent_sep = '#####'.join(tweet)
 
                     #strip non alphanumerics, lowercase
                     cleaned_tokenized_tweet = ' '.join(
-                        [tok.lower() for tok in tokenized_tweet_sent_sep.split(' ') if isalpha_or_hash(tok)])
+                        [tok.lower() for tok in tokenized_tweet])
 
                     if len(cleaned_tokenized_tweet) > 0:
-                        batch.append((tokenized_tweet_sent_sep, cleaned_tokenized_tweet, tweet_text, tweet_id))
+                        batch.append((tokenized_tweet, cleaned_tokenized_tweet, tweet_text, tweet_id))
                     # ner
                     if len(batch) >= minibatch_size:
 
