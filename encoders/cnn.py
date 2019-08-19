@@ -146,6 +146,8 @@ def main(args):
         csv_params = param_reader.read_hyperparams_from_csv(args.hyperparam_csv, args.rowid)
         vars(args).update(csv_params)
 
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    config.read(args.config)
 
     seed = args.seed
     num_epochs = args.epochs
@@ -156,7 +158,7 @@ def main(args):
     lr = args.lr
     p = args.dropout
     use_pretrained_embeddings = args.embs
-    datafile = args.data
+    datafile = config.get('Files', 'data_{}'.format(args.data_split))
     max_vocab = args.max_vocab
     additional_data_file = args.additional_data
 
@@ -170,8 +172,6 @@ def main(args):
     vars(args).update({'pred_file':pred_file})
     log_params(vars(args))
 
-    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
-    config.read(args.config)
 
     feature_extractor = sents2seqs
 
@@ -277,7 +277,7 @@ def main(args):
     dev_results['best_epoch'] = best_epoch
     dev_results['best_macro_f'] = best_macro_f
     param_reader.write_results_and_hyperparams(args.result_csv, dev_results, vars(args), labelset)
-    write_predictions(model, dev_seqs, dev_golds, dev_lengths, dev_raw_sentences, dev_tids, labelset, pred_file, write_probs=False)
+    write_predictions(model, dev_seqs, dev_golds, dev_lengths, dev_raw_sentences, dev_tids, labelset, pred_file, write_probs=True)
 
     if args.predict_test is True:
         # Prepare test data
@@ -318,13 +318,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
           description='Tweet classification using CNN')
-    parser.add_argument('--data', type=str, default='/home/mareike/PycharmProjects/catPics/data/twitter/mh17/experiments/mh17_60_20_20.json',
-                            help="File with main data")
+
     parser.add_argument('--additional_data', type=str,
                         default='combi',
                         choices = ['', 'combi', 'sbil', 'skaschi', 'samo'],
                         help="Additional train data. if empty string, no additional data is used")
-    parser.add_argument('--config', type=str, default='config.cfg',
+    parser.add_argument('--config', type=str, default='/home/mareike/PycharmProjects/sheffield/code/info_clusters/encoders/config.cfg',
                         help="Config file")
     parser.add_argument('--exp_dir', type=str, default='out',
                         help="Path to experiment folder")
@@ -351,28 +350,31 @@ if __name__ == '__main__':
     parser.add_argument('--max_vocab', type=int, default=-1,
                         help="Maximum number of words read in from the pretrained embeddings. -1 to disable")
     parser.add_argument('--hyperparam_csv', type=str,
-                        default='../hyperparams.csv',
+                        default='/home/mareike/PycharmProjects/sheffield/code/info_clusters/hyperparams.csv',
                         help="File with hyperparams. If set, values for specified hyperparams are read from the csv")
     parser.add_argument('--result_csv', type=str,
-                        default='../results_pc.csv',
+                        default='/home/mareike/PycharmProjects/sheffield/code/info_clusters/results_pc.csv',
                         help="File the results and hyperparams are written to")
     parser.add_argument('--test_result_csv', type=str,
-                        default='../results_pc_test.csv',
+                        default='/home/mareike/PycharmProjects/sheffield/code/info_clusters/results_pc_test.csv',
                         help="File the results and hyperparams are written to")
     parser.add_argument('--pred_dir', type=str,
-                        default='predictions',
+                        default='/home/mareike/PycharmProjects/sheffield/code/info_clusters/encoders/predictions',
                         help="Directory storing the prediction files")
     parser.add_argument('--activation', type=str,
                         default='', choices = ['', 'relu'],
                         help="Activation function")
     parser.add_argument('--rowid', type=int,
-                        default=2,
+                        default=8,
+                        help="Row from which hyperparams are read")
+    parser.add_argument('--data_split', type=int,
+                        default=42,
                         help="Row from which hyperparams are read")
     parser.add_argument('--predict_test', type=bool_flag,
                         default=True,
                         help="Predict the test set")
     parser.add_argument('--predict_all', type=bool_flag,
-                        default=False,
+                        default=True,
                         help="Predict the set of all tweets")
     parser.add_argument('--strip', type=bool_flag,
                         default=True,

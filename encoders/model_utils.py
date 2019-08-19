@@ -347,6 +347,7 @@ def get_auc(gold, probs, labelset):
             else: gold_binary.append(0)
             probs_binary.append(p[i])
         precision, recall, thresholds = precision_recall_curve(gold_binary, probs_binary)
+
         auc_score = auc(recall, precision)
         thr[label] = thresholds
         aucs[label] = auc_score
